@@ -23,11 +23,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
           cache: gradle
+          # O projeto Gradle fica dentro de mod/, não na raiz do repositório.
+          cache-dependency-path: mod/gradle/wrapper/gradle-wrapper.properties
 
       - name: Set up Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
@@ -35,15 +37,14 @@ jobs:
           gradle-version: "9.3.1"
 
       - name: Compile and run tests
-        run: gradle --no-daemon --stacktrace clean build
         working-directory: mod
+        run: gradle --no-daemon --stacktrace clean build
 
       - name: Upload mod JARs
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: genshin-elements-${{ github.sha }}
-          path: |
-            mod/build/libs/*.jar
+          path: mod/build/libs/*.jar
           if-no-files-found: error
           retention-days: 14
