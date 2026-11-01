@@ -1,56 +1,44 @@
-name: Build mod
+name: Build Genshin Elements Mod
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
   pull_request:
-  workflow_dispatch:   # permite rodar manualmente pela aba Actions
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Baixar o código
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Acha a pasta do projeto (onde está o settings.gradle), esteja ela na raiz ou numa subpasta como "mod/"
-      - name: Localizar o projeto
-        id: proj
-        run: |
-          f=$(find . -maxdepth 4 -name settings.gradle -not -path './.git/*' | head -n 1)
-          # Se o projeto foi enviado como .zip (comum ao subir pelo celular), extrai o zip
-          if [ -z "$f" ]; then
-            for z in $(find . -maxdepth 2 -name '*.zip' -not -path './.git/*'); do
-              echo "Extraindo $z"; unzip -oq "$z" -d "$(dirname "$z")"
-            done
-            f=$(find . -maxdepth 5 -name settings.gradle -not -path './.git/*' | head -n 1)
-          fi
-          if [ -z "$f" ]; then
-            echo "settings.gradle não encontrado: envie os arquivos do mod (ou o .zip) para o repositório"; ls -R | head -50; exit 1
-          fi
-          dir=$(dirname "$f")
-          echo "Projeto em: $dir"
-          echo "dir=$dir" >> "$GITHUB_OUTPUT"
-
-      - name: Instalar JDK 25
+      - name: Setup Java 25
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
           java-version: '25'
+          distribution: 'zulu'
+          cache: 'gradle'
 
-      # O projeto não tem gradlew, então instalamos o Gradle 9.3.1 direto
-      - name: Instalar Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
 
-      - name: Compilar
-        working-directory: ${{ steps.proj.outputs.dir }}
-        run: gradle build --no-daemon --stacktrace
+      - name: Build with Gradle
+        run: |
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper --gradle-version 9.3.1
+            chmod +x gradlew
+          else
+            chmod +x gradlew
+          fi
+          ./gradlew build --stacktrace
 
-      - name: Enviar o .jar
+      - name: Upload Mod Jar Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: genshin-elements-mod
-          path: ${{ steps.proj.outputs.dir }}/build/libs/*.jar
-          if-no-files-found: error
+          name: genshin-elements-mod-jar
+          path: build/libs/*.jar
