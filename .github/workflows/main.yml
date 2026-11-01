@@ -18,8 +18,15 @@ jobs:
         id: proj
         run: |
           f=$(find . -maxdepth 4 -name settings.gradle -not -path './.git/*' | head -n 1)
+          # Se o projeto foi enviado como .zip (comum ao subir pelo celular), extrai o zip
           if [ -z "$f" ]; then
-            echo "settings.gradle não encontrado no repositório"; exit 1
+            for z in $(find . -maxdepth 2 -name '*.zip' -not -path './.git/*'); do
+              echo "Extraindo $z"; unzip -oq "$z" -d "$(dirname "$z")"
+            done
+            f=$(find . -maxdepth 5 -name settings.gradle -not -path './.git/*' | head -n 1)
+          fi
+          if [ -z "$f" ]; then
+            echo "settings.gradle não encontrado: envie os arquivos do mod (ou o .zip) para o repositório"; ls -R | head -50; exit 1
           fi
           dir=$(dirname "$f")
           echo "Projeto em: $dir"
